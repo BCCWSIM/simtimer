@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        table {
+            width: 100%;
+        }
+        th, td {
+            padding: 30px; /* Increase padding for bigger rows */
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        input[type="text"] {
+            width: 100%; /* Make the text input area bigger */
+            height: 50px;
+        }
+    </style>
+</head>
+<body>
+
+<h2 id="date">Date: </h2> <!-- New date element -->
+<h2>Stopwatch Table</h2>
+
+<button id="pauseAll">Pause All</button>
+<button id="resetAll">Reset All</button>
+<button id="exportCSV">Export CSV</button> <!-- New export button -->
+
+<table id="myTable">
+  <tr>
+    <th>Start/Stop</th>
+    <th>Timer</th>
+    <th>Title</th> <!-- Added Title column -->
+    <th>Options</th>
+    <th>Note</th>
+  </tr>
+</table>
+
+<script>
+    // Add current date and time to the top of the page
+    document.getElementById('date').innerHTML += new Date().toLocaleString();
+
+    // Add rows to the table
+    let timers = [];
+    let firstClick = true; // To track the first click
+    for (let i = 0; i < 5; i++) {
+        let row = document.createElement('tr');
+
+        let cell1 = document.createElement('td');
+        let cell2 = document.createElement('td');
+        let cell3 = document.createElement('td'); // New cell for Title
+        let cell4 = document.createElement('td');
+        let cell5 = document.createElement('td');
+
+        let timerButton = document.createElement('button');
+        timerButton.innerHTML = 'Start';
+        timerButton.onclick = function() {
+            if (firstClick && i === 0) {
+                startAllTimers();
+                firstClick = false;
+            } else {
+                startOrStopTimer(timerButton);
+            }
+        };
+        timerButton.intervalId = null;
+        timers.push(timerButton);
+        cell1.appendChild(timerButton);
+
+        let timerDisplay = document.createElement('span');
+        timerDisplay.innerHTML = '00:00:00';
+        cell2.appendChild(timerDisplay);
+        timerButton.display = timerDisplay;
+
+        let title = document.createElement('input'); // New input for Title
+        title.type = 'text';
+        cell3.appendChild(title);
+
+        let options = document.createElement('div');
+        for (let j = 0; j < 5; j++) {
+            let checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            let label = document.createElement('label');
+            label.innerHTML = 'Option ' + (j + 1);
+            options.appendChild(checkbox);
+            options.appendChild(label);
+            options.appendChild(document.createElement('br'));
+        }
+        cell4.appendChild(options);
+
+        let note = document.createElement('input');
+        note.type = 'text';
+        cell5.appendChild(note);
+
+        row.appendChild(cell1);
+        row.appendChild(cell2);
+        row.appendChild(cell3);
+        row.appendChild(cell4);
+        row.appendChild(cell5);
+
+        document.getElementById('myTable').appendChild(row);
+    }
+
+    document.getElementById('pauseAll').onclick = function() {
+        timers.forEach(timerButton => {
+            if (timerButton.intervalId) {
+                clearInterval(timerButton.intervalId);
+                timerButton.intervalId = null;
+                timerButton.innerHTML = 'Start';
+            }
+        });
+    };
+
+    document.getElementById('resetAll').onclick = function() {
+        timers.forEach(timerButton => {
+            if (timerButton.intervalId) {
+                clearInterval(timerButton.intervalId);
+                timerButton.intervalId = null;
+            }
+            timerButton.innerHTML = 'Start';
+            timerButton.display.innerHTML = '00:00:00';
+        });
+        let notes = document.querySelectorAll('input[type="text"]');
+        notes.forEach(note => {
+            note.value = '';
+        });
+        let checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    };
+
+    // Start all timers when the first start button is clicked
+    function startAllTimers() {
+        timers.forEach(timerButton => {
+            if (!timerButton.intervalId) {
+                startOrStopTimer(timerButton);
+            }
+        });
+    }
+
+    // Stopwatch function
+    function startOrStopTimer(timerButton) {
+        if (timerButton.intervalId) {
+            clearInterval(timerButton.intervalId);
+            timerButton.intervalId = null;
+            timerButton.innerHTML = 'Start';
+        } else {
+            let seconds = 0;
+            timerButton.intervalId = setInterval(function() {
+                seconds++;
+                let hours = Math.floor(seconds / 3600);
+                let minutes = Math.floor((seconds % 3600) / 60);
+                let secondsLeft = seconds % 60;
+                timerButton.display.innerHTML = 
+                    (hours < 10 ? '0' : '') + hours + ':' +
+                    (minutes < 10 ? '0' : '') + minutes + ':' +
+                    (secondsLeft < 10 ? '0' : '') + secondsLeft;
+            }, 1000);
+            timerButton.innerHTML = 'Stop';
+        }
+    }
+
+    // Add export CSV button functionality
+    document.getElementById('exportCSV').onclick = function() {
+        let csvContent = 'data:text/csv;charset=utf-8,';
+        let rows = Array.from(document.getElementById('myTable').rows);
+        rows.forEach(row => {
+            let rowData = [];
+            rowData.push(row.cells[0].querySelector('button').innerHTML); // Start/Stop
+            rowData.push(row.cells[1].querySelector('span').innerHTML); // Timer
+            rowData.push(row.cells[2].querySelector('input[type="text"]').value); // Title
+            let options = Array.from(row.cells[3].querySelectorAll('input[type="checkbox"]'));
+            options.forEach((option, index) => {
+                rowData.push('Option ' + (index + 1) + ': ' + option.checked);
+            });
+            rowData.push(row.cells[4].querySelector('input[type="text"]').value); // Note
+            csvContent += rowData.join(',') + '\r\n';
+        });
+        let encodedUri = encodeURI(csvContent);
+        let link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', 'export.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+</script>
+</body>
+</html>
